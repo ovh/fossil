@@ -3,6 +3,7 @@ package cmd
 import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/ovh/fossil/listener"
+	"github.com/ovh/fossil/writer"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -85,6 +86,9 @@ var RootCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
+
+		wr := writer.NewWriter(viper.GetString("directory"))
+		wr.Write(graphite.Output)
 
 		log.Info("Fossil started")
 		select {}
