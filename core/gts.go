@@ -15,7 +15,7 @@ type GTS struct {
 
 // Encode a GTS to the Sensision format
 // TS/LAT:LON/ELEV NAME{LABELS} VALUE
-func (gts *GTS) encode() []byte {
+func (gts *GTS) Encode() []byte {
 	sensision := fmt.Sprintf("%d// %s{", gts.Ts, url.QueryEscape(gts.Name))
 
 	sep := ""

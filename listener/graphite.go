@@ -2,18 +2,15 @@ package listener
 
 import (
 	"bufio"
+	"errors"
+	"io"
 	"net"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ovh/fossil/core"
-
-	"errors"
-
-	"io"
-
 	log "github.com/Sirupsen/logrus"
+	"github.com/ovh/fossil/core"
 )
 
 // Graphite is a Graphite socket who parse to sensision format
@@ -91,7 +88,7 @@ func (g *Graphite) handleTCPConnection(conn net.Conn) {
 
 		log.Info(datapoint)
 		// if nothing eat the chan, prevent to handle next line
-		//g.Output <- datapoint
+		g.Output <- datapoint
 	}
 }
 
