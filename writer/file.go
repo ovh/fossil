@@ -14,19 +14,16 @@ import (
 
 // FileWriter write GTS onto files
 type FileWriter struct {
-	Metrics         []*core.GTS
-	SourceDir       string
-	currentFile     *os.File
-	currentFileName string
-	batchCount      int64
-	batchFull       chan struct{}
-	sync.RWMutex
+	Metrics    []*core.GTS
+	SourceDir  string
+	batchCount int64
+	batchFull  chan struct{}
+	sync.Mutex
 }
 
 // NewWriter return an instanciated FileWriter
 func NewWriter(dir string) *FileWriter {
-
-	f := &FileWriter{
+	fw := &FileWriter{
 		SourceDir:  dir,
 		batchFull:  make(chan struct{}),
 		batchCount: 0,
@@ -35,27 +32,27 @@ func NewWriter(dir string) *FileWriter {
 
 	go func() {
 		tick := time.NewTicker(viper.GetDuration("timeout") * time.Second)
-		select {
-		case <-tick.C:
-			f.Lock()
-			if f.batchCount > 0 {
-				err := f.flush()
+
+		for range tick.C {
+			fw.Lock()
+			if fw.batchCount > 0 {
+				err := fw.flush()
 				if err != nil {
 					log.WithFields(log.Fields{"error": err.Error()}).Error("Cannot flush datapoints into file")
 				}
 			}
-			f.Unlock()
+			fw.Unlock()
 		}
 	}()
 
-	return f
+	return fw
 }
 
 func (fw *FileWriter) Write(gts *core.GTS) {
 	fw.Lock()
 	defer fw.Unlock()
 	fw.Metrics = append(fw.Metrics, gts)
-	fw.batchCount += 1
+	fw.batchCount++
 
 	if fw.batchCount >= int64(viper.GetInt("batch")) {
 		err := fw.flush()
@@ -76,14 +73,15 @@ func (fw *FileWriter) flush() error {
 	}
 
 	for _, gts := range fw.Metrics {
-
 		_, err := newFile.Write(gts.Encode())
 		if err != nil {
 			log.WithError(err).Error("Failed to write metrics in file")
 			return err
 		}
 	}
+
 	fw.batchCount = 0
 	fw.Metrics = []*core.GTS{}
+
 	return os.Rename(path.Join(fw.SourceDir, fileName+".tmp"), path.Join(fw.SourceDir, fileName+".metrics"))
 }
