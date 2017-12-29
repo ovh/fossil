@@ -13,17 +13,23 @@ import (
 	"github.com/ovh/fossil/core"
 )
 
+type Writer interface {
+	Write(*core.GTS)
+}
+
 // Graphite is a Graphite socket who parse to sensision format
 type Graphite struct {
 	Output chan *core.GTS
+	Writer Writer
 	Listen string
 }
 
 // NewGraphite return a new Graphite initialized with his output chan
-func NewGraphite(listen string) *Graphite {
+func NewGraphite(listen string, writer Writer) *Graphite {
 	return &Graphite{
 		Output: make(chan *core.GTS),
 		Listen: listen,
+		Writer: writer,
 	}
 }
 
@@ -35,24 +41,21 @@ func (g *Graphite) OpenTCPServer() error {
 	}
 	log.Info("Listen on", g.Listen)
 
-	go func() {
-		for {
-			conn, err := ln.Accept()
+	for {
+		conn, err := ln.Accept()
 
-			if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
-				log.Debug("graphite TCP listener closed")
-				continue
-			}
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error": err.Error(),
-				}).Warn("error accepting TCP connection")
-				continue
-			}
-			go g.handleTCPConnection(conn)
+		if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
+			log.Debug("graphite TCP listener closed")
+			continue
 		}
-	}()
-	return nil
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err.Error(),
+			}).Warn("error accepting TCP connection")
+			continue
+		}
+		go g.handleTCPConnection(conn)
+	}
 }
 
 // handleTCPConnection services an individual TCP connection for the Graphite input
@@ -64,7 +67,6 @@ func (g *Graphite) handleTCPConnection(conn net.Conn) {
 	for {
 		buf, _, err := reader.ReadLine()
 		if err == io.EOF {
-			log.Info("EOF")
 			return
 		}
 		if err != nil {
@@ -86,9 +88,8 @@ func (g *Graphite) handleTCPConnection(conn net.Conn) {
 			continue
 		}
 
-		log.Info(datapoint)
-		// if nothing eat the chan, prevent to handle next line
-		g.Output <- datapoint
+		log.Debug(datapoint)
+		g.Writer.Write(datapoint)
 	}
 }
 
