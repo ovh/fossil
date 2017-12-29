@@ -54,7 +54,8 @@ func (gts *GTS) Encode() []byte {
 		strVal := fmt.Sprintf("%v", gts.Value)
 		sensision += url.QueryEscape(strVal)
 	}
-	sensision += "\r\n"
 
+	// According to https://github.com/golang/go/blob/master/src/fmt/print.go#L1148
+	sensision += "\n"
 	return []byte(sensision)
 }

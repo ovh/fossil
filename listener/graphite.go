@@ -13,13 +13,16 @@ import (
 	"github.com/ovh/fossil/core"
 )
 
+const nanosPerSec = 1000000000
+const nanosPerMilli = 1000000
+
+// Writer interface which is used to save graphite datapoints
 type Writer interface {
 	Write(*core.GTS)
 }
 
 // Graphite is a Graphite socket who parse to sensision format
 type Graphite struct {
-	Output chan *core.GTS
 	Writer Writer
 	Listen string
 }
@@ -27,7 +30,6 @@ type Graphite struct {
 // NewGraphite return a new Graphite initialized with his output chan
 func NewGraphite(listen string, writer Writer) *Graphite {
 	return &Graphite{
-		Output: make(chan *core.GTS),
 		Listen: listen,
 		Writer: writer,
 	}
@@ -39,21 +41,26 @@ func (g *Graphite) OpenTCPServer() error {
 	if err != nil {
 		return err
 	}
-	log.Info("Listen on", g.Listen)
+
+	log.Infof("Listen on %s", g.Listen)
 
 	for {
 		conn, err := ln.Accept()
 
 		if opErr, ok := err.(*net.OpError); ok && !opErr.Temporary() {
-			log.Debug("graphite TCP listener closed")
+			log.WithFields(log.Fields{
+				"error": opErr,
+			}).Debug("Graphite TCP listener closed")
 			continue
 		}
+
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err.Error(),
-			}).Warn("error accepting TCP connection")
+			}).Warn("Error has occurred while accepting the TCP connection")
 			continue
 		}
+
 		go g.handleTCPConnection(conn)
 	}
 }
@@ -61,9 +68,9 @@ func (g *Graphite) OpenTCPServer() error {
 // handleTCPConnection services an individual TCP connection for the Graphite input
 func (g *Graphite) handleTCPConnection(conn net.Conn) {
 	defer conn.Close()
-	reader := bufio.NewReader(conn)
-	var metric string
 
+	var metric string
+	reader := bufio.NewReader(conn)
 	for {
 		buf, _, err := reader.ReadLine()
 		if err == io.EOF {
@@ -78,7 +85,6 @@ func (g *Graphite) handleTCPConnection(conn net.Conn) {
 		}
 
 		metric = strings.TrimSpace(string(buf))
-
 		datapoint, err := g.parseLine(metric)
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -94,8 +100,8 @@ func (g *Graphite) handleTCPConnection(conn net.Conn) {
 }
 
 func (g *Graphite) parseLine(metric string) (*core.GTS, error) {
-
 	split := strings.Split(metric, " ")
+
 	// From metrics with love
 	if len(split) < 3 {
 		return nil, errors.New("Bad metric format")
@@ -106,19 +112,53 @@ func (g *Graphite) parseLine(metric string) (*core.GTS, error) {
 		return nil, errors.New("Bad metric part: timestamp")
 	}
 
+	var value interface{}
+	skip := false
+
+	// try to convert the string into a float64
+	if strings.Contains(split[1], ".") {
+		number, err := strconv.ParseFloat(split[1], 64)
+		if err == nil {
+			skip = true
+			value = number
+		}
+	}
+
+	// try to convert the string into an integer
+	if !skip {
+		number, err := strconv.ParseInt(split[1], 10, 64)
+		if err == nil {
+			skip = true
+			value = number
+		}
+	}
+
+	// try to convert the string into a boolean
+	if !skip {
+		if strings.ToLower(split[1]) == "true" {
+			skip = true
+			value = true
+		} else if strings.ToLower(split[1]) == "false" {
+			skip = true
+			value = false
+		}
+	}
+
+	// assume that the value is a string
+	if !skip {
+		value = split[1]
+	}
+
 	dp := &core.GTS{
 		Ts:     int64toTime(ts).UnixNano() / 1000,
 		Name:   split[0],
-		Value:  split[1],
+		Value:  value,
 		Labels: make(map[string]string),
 	}
 
 	classPart := strings.Split(split[0], ".")
-
-	i := 0
-	for _, part := range classPart {
-		dp.Labels[strconv.Itoa(i)] = part
-		i++
+	for idx, part := range classPart {
+		dp.Labels[strconv.Itoa(idx)] = part
 	}
 
 	return dp, nil
@@ -129,13 +169,11 @@ func int64toTime(timestamp int64) time.Time {
 	if timestamp == 0 {
 		return time.Now()
 	}
-	const nanosPerSec = 1000000000
-	const nanosPerMilli = 1000000
 
 	timeNanos := timestamp
+	// If less than 2^32, assume it's in seconds
+	// (in millis that would be Thu Feb 19 18:02:47 CET 1970)
 	if timeNanos < 0xFFFFFFFF {
-		// If less than 2^32, assume it's in seconds
-		// (in millis that would be Thu Feb 19 18:02:47 CET 1970)
 		timeNanos *= nanosPerSec
 	} else {
 		timeNanos *= nanosPerMilli
