@@ -4,66 +4,86 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/ovh/fossil/core"
+	"github.com/spf13/viper"
 )
 
 // FileWriter write GTS onto files
 type FileWriter struct {
+	Metrics         []*core.GTS
 	SourceDir       string
 	currentFile     *os.File
 	currentFileName string
+	batchCount      int64
+	batchFull       chan struct{}
+	sync.RWMutex
 }
 
 // NewWriter return an instanciated FileWriter
 func NewWriter(dir string) *FileWriter {
 
 	f := &FileWriter{
-		SourceDir: dir,
+		SourceDir:  dir,
+		batchFull:  make(chan struct{}),
+		batchCount: 0,
+		Metrics:    []*core.GTS{},
 	}
 
 	go func() {
-		tick := time.NewTicker(5 * time.Second)
-		for range tick.C {
-			f.fileRotate()
+		tick := time.NewTicker(viper.GetDuration("timeout") * time.Second)
+		select {
+		case <-tick.C:
+			f.Lock()
+			if f.batchCount > 0 {
+				err := f.flush()
+				if err != nil {
+					log.WithFields(log.Fields{"error": err.Error()}).Error("Cannot flush datapoints into file")
+				}
+			}
+			f.Unlock()
 		}
 	}()
-
-	f.fileRotate()
 
 	return f
 }
 
-func (fw *FileWriter) Write(in chan *core.GTS) {
+func (fw *FileWriter) Write(gts *core.GTS) {
+	fw.Lock()
+	defer fw.Unlock()
+	fw.Metrics = append(fw.Metrics, gts)
+	fw.batchCount += 1
 
-	for gts := range in {
-		log.Debug(gts)
-		_, err := fw.currentFile.Write(gts.Encode())
+	if fw.batchCount >= int64(viper.GetInt("batch")) {
+		err := fw.flush()
 		if err != nil {
-			log.WithError(err).Error("Failed to write metrics in file")
+			log.WithFields(log.Fields{"error": err.Error()}).Error("Cannot flush datapoints into file")
 		}
 	}
 }
 
-func (fw *FileWriter) fileRotate() error {
+func (fw *FileWriter) flush() error {
 
 	now := time.Now()
 	fileName := strconv.Itoa(int(now.UnixNano()))
-
 	newFile, err := os.Create(path.Join(fw.SourceDir, fileName+".tmp"))
+
 	if err != nil {
 		return err
 	}
 
-	oldFileName := fw.currentFileName
+	for _, gts := range fw.Metrics {
 
-	fw.currentFile = newFile
-	fw.currentFileName = fileName
-
-	if oldFileName != "" {
-		return os.Rename(path.Join(fw.SourceDir, oldFileName+".tmp"), path.Join(fw.SourceDir, oldFileName+".metrics"))
+		_, err := newFile.Write(gts.Encode())
+		if err != nil {
+			log.WithError(err).Error("Failed to write metrics in file")
+			return err
+		}
 	}
-	return nil
+	fw.batchCount = 0
+	fw.Metrics = []*core.GTS{}
+	return os.Rename(path.Join(fw.SourceDir, fileName+".tmp"), path.Join(fw.SourceDir, fileName+".metrics"))
 }

@@ -8,40 +8,25 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-var verbose bool
-var listen string
-var flushDir string
-
 // Fossil init - define command line arguments.
 func init() {
 	cobra.OnInitialize(initConfig)
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file to use")
-	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-	RootCmd.PersistentFlags().StringVarP(&listen, "listen", "l", ":2003", "listen address")
-	RootCmd.PersistentFlags().StringVarP(&flushDir, "directory", "d", "./sources", "directory to write metrics file")
+	RootCmd.PersistentFlags().String("config", "", "config file to use")
+	RootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
+	RootCmd.Flags().StringP("listen", "l", ":2003", "listen address")
+	RootCmd.Flags().IntP("batch", "b", 10000, "batch count per file")
+	RootCmd.Flags().IntP("timeout", "t", 5, "batch timeout for flushing datapoints")
+	RootCmd.Flags().StringP("directory", "d", "./sources", "directory to write metrics file")
 
 	viper.BindPFlags(RootCmd.Flags())
+	viper.BindPFlags(RootCmd.PersistentFlags())
 }
 
 // Load config - initialize defaults and read config.
 func initConfig() {
-	if verbose {
+	if viper.GetBool("verbose") {
 		log.SetLevel(log.DebugLevel)
 	}
-
-	/*if thotToken := os.Getenv("THOT_TOKEN"); thotToken != "" {
-		config := thot.NewConfig()
-		config.Extra[thot.OVHToken] = thotToken
-
-		hook, err := thot.NewHook(config)
-		if err != nil {
-			log.Errorf("Failed to setup THOT: %s", err)
-		} else {
-			log.AddHook(hook)
-			log.Info("THOT OK")
-		}
-	}*/
 
 	// Bind environment variables
 	viper.SetEnvPrefix("fossil")
@@ -63,8 +48,9 @@ func initConfig() {
 	}
 
 	// Load user defined config
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+	cfg := viper.GetString("config")
+	if cfg != "" {
+		viper.SetConfigFile(cfg)
 		err := viper.ReadInConfig()
 		if err != nil {
 			log.Panicf("Fatal error in config file: %v \n", err)
@@ -79,18 +65,12 @@ var RootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		log.Info("Fossil starting")
 
-		//writer := writer.New
+		wr := writer.NewWriter(viper.GetString("directory"))
 
-		graphite := listener.NewGraphite(listen)
+		graphite := listener.NewGraphite(viper.GetString("listen"), wr)
 		err := graphite.OpenTCPServer()
 		if err != nil {
 			panic(err)
 		}
-
-		wr := writer.NewWriter(viper.GetString("directory"))
-		wr.Write(graphite.Output)
-
-		log.Info("Fossil started")
-		select {}
 	},
 }
