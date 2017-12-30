@@ -25,7 +25,7 @@ Before install fossil you need some tools:
 First, you have to clone it:
 
 ```sh
-git clone git@github.com:ovh/fossil.git $GOPATH/src/github.com/ovh/fossil
+git clone https://github.com/ovh/fossil.git $GOPATH/src/github.com/ovh/fossil
 ```
 
 Go into the fresh installation:
