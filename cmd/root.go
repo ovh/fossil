@@ -51,6 +51,7 @@ func initConfig() {
 	cfg := viper.GetString("config")
 	if cfg != "" {
 		viper.SetConfigFile(cfg)
+        viper.SetConfigType("json")
 		err := viper.ReadInConfig()
 		if err != nil {
 			log.Panicf("Fatal error in config file: %v \n", err)
