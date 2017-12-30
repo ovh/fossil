@@ -1,4 +1,5 @@
 BUILD_DIR=build
+PREFIX = /usr/local
 
 CC=go build
 GITHASH=$(shell git rev-parse HEAD)
@@ -22,6 +23,14 @@ release: fossil.go $$(call rwildcard, ./cmd, *.go) $$(call rwildcard, ./core, *.
 .PHONY: dist
 dist: fossil.go $$(call rwildcard, ./cmd, *.go) $$(call rwildcard, ./core, *.go) $$(call rwildcard, ./listener, *.go) $$(call rwildcard, ./writer, *.go)
 	$(CROSS) $(CC) $(CFLAGS) -ldflags "-s -w" -o $(BUILD_DIR)/fossil fossil.go
+
+.PHONY: install
+install: 
+	install -m 0755 $(BUILD_DIR)/fossil $(PREFIX)/bin
+
+.PHONY: uninstall
+uninstall: 
+	rm -f $(PREFIX)/bin/fossil
 
 .PHONY: lint
 lint:
