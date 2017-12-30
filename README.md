@@ -91,6 +91,7 @@ Here is an example :
   "directory": "/home/fossil/sources/"
 }
 ```
+find a sample in the config directory of this repository
 
 ## Example
 
