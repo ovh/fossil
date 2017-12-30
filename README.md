@@ -46,6 +46,12 @@ Now, the best part compilation:
 make release
 ```
 
+Finally, install fossil:
+
+```sh
+sudo make install
+```
+
 ## Usage
 
 ```sh
