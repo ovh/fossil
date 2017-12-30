@@ -51,6 +51,7 @@ Finally, install fossil:
 ```sh
 sudo make install
 ```
+**NB:** `make install` will also enable a systemd fossil service, to start fossil you just need to do `systemctl start fossil.service`
 
 ## Usage
 

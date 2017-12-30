@@ -1,4 +1,5 @@
 BUILD_DIR=build
+CONFIG_DIR=config
 PREFIX = /usr/local
 
 CC=go build
@@ -24,8 +25,14 @@ release: fossil.go $$(call rwildcard, ./cmd, *.go) $$(call rwildcard, ./core, *.
 dist: fossil.go $$(call rwildcard, ./cmd, *.go) $$(call rwildcard, ./core, *.go) $$(call rwildcard, ./listener, *.go) $$(call rwildcard, ./writer, *.go)
 	$(CROSS) $(CC) $(CFLAGS) -ldflags "-s -w" -o $(BUILD_DIR)/fossil fossil.go
 
+.PHONY: service_install
+service_install: 
+    install -m 0755 $(CONFIG_DIR)/systemd/fossil.service /etc/systemd/system/multi-user.target.wants/
+	systemctl daemon-reload 
+	systemctl enable fossil.service
+
 .PHONY: install
-install:
+install: service_install
 	install -m 0755 $(BUILD_DIR)/fossil $(PREFIX)/bin
 
 .PHONY: uninstall
