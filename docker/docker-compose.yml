@@ -1,0 +1,10 @@
+version: '2.2'
+
+services:
+  fossil:
+    image: rzarouali/fossil:latest
+    ports:
+      - "2003:2003"
+    volumes:
+      - ./:/opt/fossil/sources/
+      - ./config.json:/etc/fossil/config.json

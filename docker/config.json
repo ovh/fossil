@@ -1,0 +1,8 @@
+{
+  "listen": ":2003",
+  "verbose": "true",
+  "batch": "10000",
+  "timeout": "5",
+  "directory": "/opt/fossil/sources/"
+}
+
