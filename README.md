@@ -77,6 +77,29 @@ Flags:
 Use "fossil [command] --help" for more information about a command.
 ```
 
+## Configuration
+
+Fossil configuration file is in JSON format.
+By default Fossil will look for a configuration file named: `config.json`
+in these directories:
+```sh
+/etc/fossil/
+$HOME/.fossil
+.
+```
+
+Here is an example :
+```sh
+{
+  "listen": ":2003",
+  "verbose": "true",
+  "batch": "10000",
+  "timeout": "5",
+  "directory": "/home/fossil/sources/"
+}
+```
+find a sample in the config directory of this repository
+
 ## Example
 
 ```sh
