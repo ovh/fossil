@@ -1,7 +1,7 @@
 language: go
 go:
 - 1.7.x
-go_import_path: github.com/ovh/noderig
+go_import_path: github.com/ovh/fossil
 before_install:
 - go get github.com/Masterminds/glide
 - go get github.com/alecthomas/gometalinter
@@ -10,3 +10,13 @@ script:
 - glide install
 - make lint
 - make
+deploy:
+  provider: releases
+  api_key:
+    secure: dPUG3asAtp8OFJhKGxf/oI3W13zWe+OG82mrUuheE6QrxPFijvOyWw+LOkfJeTHENilBi+P5Zhk3kzUQv5hntPqqMa8Xqvs7buz/NLDZrzt7/V2O5eu0sIFtZJiXuhHN6bIhGEhOc95/7QD34nlBWaPOavluiLss7QfQAGLSvPG3cI5rN4MOez7kDe61Pro4Znz/VEiet3tNQq8BbARMNmLJLwN12cab/VUijiA9YAsOPLCRArWBegGuXh87Hhq/y/+jj48Q5Ukky7fg6TvcJQM5e4BIe3HEX0AL8YG5jwbxwnR+bwUVGBIWw35aBjJy6Va05suRl5xv3Lf/7KUZCoyC0pogJWN/OCAWJkteEOkXMDJ6940V7OgimR3U11XsbNQpIsg/tNgKqiRCWPID5anWI1Jmm/KKsBqZHOQRyEQgFjAqOGvwTLI4XNbI/ciGFK+OKEaW51sAGPmITQ3Xy5/Jd/N9Mc9CAsJvVUXEOI6XEuVRWdTh9wnGLWt9zHVRyUTJL+6MOyfNR7tClAc0ROwfm6YpEZVBuG4scM2X0RYFeAOk8jf6MDPjAnaTUWCXGYZ63Lq+Z9GJEmWWGn3lxOARuTyxlXU4BAxBL8lEIVc3FL7fuRYtFsejI1pqHsdaSLkji/B9ZnYvnReinmlfqSzwYcZXeoRJgoxbJh5UMRc=
+  file: build/fossil
+  skip_cleanup: true
+  on:
+    repo: ovh/fossil
+    branch: master
+    tags: true
