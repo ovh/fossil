@@ -5,30 +5,28 @@ PREFIX = /usr/local
 CC=go build
 GITHASH=$(shell git rev-parse HEAD)
 DFLAGS=-race
-CFLAGS=-ldflags "-X github.com/runabove/fossil/cmd.githash=$(GITHASH)"
+CFLAGS=-X github.com/runabove/fossil/cmd.githash=$(GITHASH)
 CROSS=GOOS=linux GOARCH=amd64
-
 
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 VPATH= $(BUILD_DIR)
 
 .SECONDEXPANSION:
-
 build: fossil.go $$(call rwildcard, ./cmd, *.go) $$(call rwildcard, ./core, *.go) $$(call rwildcard, ./listener, *.go) $$(call rwildcard, ./writer, *.go)
-	$(CC) $(DFLAGS) $(CFLAGS) -o $(BUILD_DIR)/fossil fossil.go
+	$(CC) $(DFLAGS) -ldflags "$(CFLAGS)" -o $(BUILD_DIR)/fossil fossil.go
 
 .PHONY: release
 release: fossil.go $$(call rwildcard, ./cmd, *.go) $$(call rwildcard, ./core, *.go) $$(call rwildcard, ./listener, *.go) $$(call rwildcard, ./writer, *.go)
-	$(CC) $(CFLAGS) -ldflags "-s -w" -o $(BUILD_DIR)/fossil fossil.go
+	$(CC) -ldflags "-s -w $(CFLAGS)" -o $(BUILD_DIR)/fossil fossil.go
 
 .PHONY: dist
 dist: fossil.go $$(call rwildcard, ./cmd, *.go) $$(call rwildcard, ./core, *.go) $$(call rwildcard, ./listener, *.go) $$(call rwildcard, ./writer, *.go)
-	$(CROSS) $(CC) $(CFLAGS) -ldflags "-s -w" -o $(BUILD_DIR)/fossil fossil.go
+	$(CROSS) $(CC) -ldflags "-s -w $(CFLAGS)" -o $(BUILD_DIR)/fossil fossil.go
 
 .PHONY: service_install
-service_install: 
-    install -m 0755 $(CONFIG_DIR)/systemd/fossil.service /etc/systemd/system/multi-user.target.wants/
-	systemctl daemon-reload 
+service_install:
+	install -m 0755 $(CONFIG_DIR)/systemd/fossil.service /etc/systemd/system/multi-user.target.wants/
+	systemctl daemon-reload
 	systemctl enable fossil.service
 
 .PHONY: install
