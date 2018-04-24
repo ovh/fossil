@@ -17,6 +17,7 @@ func init() {
 	RootCmd.Flags().IntP("batch", "b", 10000, "batch count per file")
 	RootCmd.Flags().IntP("timeout", "t", 5, "batch timeout for flushing datapoints")
 	RootCmd.Flags().StringP("directory", "d", "./sources", "directory to write metrics file")
+	RootCmd.Flags().BoolP("parse", "p", true, "parse metric name to auto fill tags")
 
 	viper.BindPFlags(RootCmd.Flags())
 	viper.BindPFlags(RootCmd.PersistentFlags())
@@ -68,7 +69,7 @@ var RootCmd = &cobra.Command{
 
 		wr := writer.NewWriter(viper.GetString("directory"))
 
-		graphite := listener.NewGraphite(viper.GetString("listen"), wr)
+		graphite := listener.NewGraphite(viper.GetString("listen"), wr, viper.GetBool("parse"))
 		err := graphite.OpenTCPServer()
 		if err != nil {
 			panic(err)

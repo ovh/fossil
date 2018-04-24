@@ -25,13 +25,15 @@ type Writer interface {
 type Graphite struct {
 	Writer Writer
 	Listen string
+	Parse  bool
 }
 
 // NewGraphite return a new Graphite initialized with his output chan
-func NewGraphite(listen string, writer Writer) *Graphite {
+func NewGraphite(listen string, writer Writer, p bool) *Graphite {
 	return &Graphite{
 		Listen: listen,
 		Writer: writer,
+		Parse:  p,
 	}
 }
 
@@ -102,7 +104,7 @@ func (g *Graphite) handleTCPConnection(conn net.Conn) {
 func (g *Graphite) parseLine(metric string) (*core.GTS, error) {
 	split := strings.Split(metric, " ")
 
-	// From metrics with love
+	// Minimum expected format is : 'metrics value timestamp'
 	if len(split) < 3 {
 		return nil, errors.New("Bad metric format")
 	}
@@ -151,14 +153,39 @@ func (g *Graphite) parseLine(metric string) (*core.GTS, error) {
 
 	dp := &core.GTS{
 		Ts:     int64toTime(ts).UnixNano() / 1000,
-		Name:   split[0],
 		Value:  value,
 		Labels: make(map[string]string),
 	}
 
-	classPart := strings.Split(split[0], ".")
-	for idx, part := range classPart {
-		dp.Labels[strconv.Itoa(idx)] = part
+	// Check if there are tags
+	if strings.Contains(split[0], ";") {
+		subSplit := strings.Split(split[0], ";")
+		dp.Name = subSplit[0]
+
+		// If no tags, but auto fill enabled, we map the hierarchy for later by label processing purpose
+		if g.Parse {
+			classPart := strings.Split(subSplit[0], ".")
+			for idx, part := range classPart {
+				dp.Labels[strconv.Itoa(idx)] = part
+			}
+		}
+
+		// Parse tags
+		for _, v := range subSplit[1:] {
+			tagSplit := strings.Split(v, "=")
+			dp.Labels[tagSplit[0]] = tagSplit[1]
+		}
+
+	} else {
+		dp.Name = split[0]
+
+		// If no tags, but auto fill enabled, we map the hierarchy for later by label processing purpose
+		if g.Parse {
+			classPart := strings.Split(split[0], ".")
+			for idx, part := range classPart {
+				dp.Labels[strconv.Itoa(idx)] = part
+			}
+		}
 	}
 
 	return dp, nil
