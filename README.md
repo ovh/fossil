@@ -16,7 +16,7 @@ We use it in combination with [Beamium](https://github.com/ovh/beamium). This co
 
 Before install fossil you need some tools:
 
-* [glide](http://glide.sh/)
+* [Dep](https://golang.github.io/dep/)
 * [Go](https://golang.org/)
 * make
 
@@ -34,10 +34,10 @@ Go into the fresh installation:
 cd $GOPATH/src/github.com/ovh/fossil
 ```
 
-Install project dependencies using glide:
+Install project dependencies using Dep:
 
 ```sh
-glide install
+dep ensure
 ```
 
 Now, the best part compilation:

@@ -3,11 +3,11 @@ go:
 - 1.7.x
 go_import_path: github.com/ovh/fossil
 before_install:
-- go get github.com/Masterminds/glide
+- curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 - go get github.com/alecthomas/gometalinter
 before_script: gometalinter --install --update
 script:
-- glide install
+- dep ensure
 - make lint
 - make
 deploy:
