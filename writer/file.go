@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/ovh/fossil/core"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 

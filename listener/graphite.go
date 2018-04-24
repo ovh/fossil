@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/ovh/fossil/core"
+	log "github.com/sirupsen/logrus"
 )
 
 const nanosPerSec = 1000000000

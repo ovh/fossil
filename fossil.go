@@ -12,8 +12,8 @@
 package main
 
 import (
-	log "github.com/Sirupsen/logrus"
 	"github.com/ovh/fossil/cmd"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
