@@ -5,7 +5,7 @@ PREFIX = /usr/local
 CC=go build
 GITHASH=$(shell git rev-parse HEAD)
 DFLAGS=-race
-CFLAGS=-X github.com/runabove/fossil/cmd.githash=$(GITHASH)
+CFLAGS=-X github.com/ovh/fossil/cmd.githash=$(GITHASH)
 CROSS=GOOS=linux GOARCH=amd64
 
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
